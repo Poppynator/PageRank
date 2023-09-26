@@ -8,9 +8,9 @@ SAMPLES = 10000
 
 
 def main():
-    #if len(sys.argv) != 2:
-        #sys.exit("Usage: python pagerank.py corpus")
-    corpus = crawl("c:\\Users\\d-pop\\Documents\\Visual Studio Code\\PageRank\\PageRank\\corpus0")
+    if len(sys.argv) != 2:
+        sys.exit("Usage: python pagerank.py corpus")
+    corpus = crawl(sys.argv[1]) 
     ranks = sample_pagerank(corpus, DAMPING, SAMPLES)
     print(f"PageRank Results from Sampling (n = {SAMPLES})")
     for page in sorted(ranks):
@@ -57,7 +57,21 @@ def transition_model(corpus, page, damping_factor):
     linked to by `page`. With probability `1 - damping_factor`, choose
     a link at random chosen from all pages in the corpus.
     """
-    raise NotImplementedError
+    dist = {}
+    links = len(corpus[page])
+
+    if links:
+        for link in corpus:
+            dist[link] = (1 - damping_factor) / len(corpus)
+        
+        for link in corpus[page]:
+            dist[link] += damping_factor / links
+
+    else:
+        for link in corpus:
+            dist[link] = 1 / len(corpus)
+
+    return dist
 
 
 def sample_pagerank(corpus, damping_factor, n):
@@ -69,7 +83,22 @@ def sample_pagerank(corpus, damping_factor, n):
     their estimated PageRank value (a value between 0 and 1). All
     PageRank values should sum to 1.
     """
-    raise NotImplementedError
+
+    dist = {}
+
+    for page in corpus:
+        dist[page] = 0
+
+    page = random.choice(list(corpus.keys()))
+
+    for i in range(1, n):
+        curr_dist = transition_model(corpus,page,damping_factor)
+        for page in dist:
+            dist[page] = ((i-1)* dist[page] + curr_dist[page]) / i
+
+        page = random.choices(list(dist.keys()), list(dist.values()), k=1)[0]
+
+    return dist
 
 
 def iterate_pagerank(corpus, damping_factor):
@@ -81,7 +110,31 @@ def iterate_pagerank(corpus, damping_factor):
     their estimated PageRank value (a value between 0 and 1). All
     PageRank values should sum to 1.
     """
-    raise NotImplementedError
+    ranks = {}
+    threshold = 0.0005
+    N = len(corpus)
+    
+    for key in corpus:
+        ranks[key] = 1 / N
+
+
+    while True:
+        count = 0
+        for key in corpus:
+            new = (1 - damping_factor) / N
+            sigma = 0
+            for page in corpus:
+                if key in corpus[page]:
+                    num_links = len(corpus[page])
+                    sigma = sigma + ranks[page] / num_links
+            sigma = damping_factor * sigma
+            new += sigma
+            if abs(ranks[key] - new) < threshold:
+                count += 1
+            ranks[key] = new 
+        if count == N:
+            break
+    return ranks
 
 
 if __name__ == "__main__":
