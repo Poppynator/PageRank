@@ -8,9 +8,9 @@ SAMPLES = 10000
 
 
 def main():
-    if len(sys.argv) != 2:
-        sys.exit("Usage: python pagerank.py corpus")
-    corpus = crawl(sys.argv[1]) 
+    #if len(sys.argv) != 2:
+        #sys.exit("Usage: python pagerank.py corpus")
+    corpus = crawl("c:\\Users\\d-pop\\Documents\\Visual Studio Code\\PageRank\\PageRank\\corpus2") #(sys.argv[1]) TODO
     ranks = sample_pagerank(corpus, DAMPING, SAMPLES)
     print(f"PageRank Results from Sampling (n = {SAMPLES})")
     for page in sorted(ranks):
@@ -57,22 +57,23 @@ def transition_model(corpus, page, damping_factor):
     linked to by `page`. With probability `1 - damping_factor`, choose
     a link at random chosen from all pages in the corpus.
     """
+    num_pages = len(corpus)
     dist = {}
-    links = len(corpus[page])
+    
+    if page in corpus and len(corpus[page]) > 0:
+        # Distribute the damping factor equally among linked pages
+        linked_prob = damping_factor / len(corpus[page])
+        for linked_page in corpus[page]:
+            dist[linked_page] = linked_prob
 
-    if links:
-        for link in corpus:
-            dist[link] = (1 - damping_factor) / len(corpus)
-        
-        for link in corpus[page]:
-            dist[link] += damping_factor / links
-
-    else:
-        for link in corpus:
-            dist[link] = 1 / len(corpus)
+    # Distribute the remaining probability uniformly to all pages
+    uniform_prob = (1 - damping_factor) / num_pages
+    for other_page in corpus:
+        dist.setdefault(other_page, 0)
+        dist[other_page] += uniform_prob
 
     return dist
-
+    
 
 def sample_pagerank(corpus, damping_factor, n):
     """
@@ -84,21 +85,22 @@ def sample_pagerank(corpus, damping_factor, n):
     PageRank values should sum to 1.
     """
 
-    dist = {}
-
-    for page in corpus:
-        dist[page] = 0
-
+    num_pages = len(corpus)
+    page_rank = {page: 1 / num_pages for page in corpus}
     page = random.choice(list(corpus.keys()))
 
-    for i in range(1, n):
-        curr_dist = transition_model(corpus,page,damping_factor)
-        for page in dist:
-            dist[page] = ((i-1)* dist[page] + curr_dist[page]) / i
+    for _ in range(n):
+        transition_probs = transition_model(corpus, page, damping_factor)
+        page = random.choices(list(transition_probs.keys()), weights=transition_probs.values(), k=1)[0]
 
-        page = random.choices(list(dist.keys()), list(dist.values()), k=1)[0]
+        # Update the PageRank for the chosen page
+        page_rank[page] += 1
 
-    return dist
+    # Normalize PageRank values to sum to 1
+    total_rank = sum(page_rank.values())
+    page_rank = {page: rank / total_rank for page, rank in page_rank.items()}
+
+    return page_rank
 
 
 def iterate_pagerank(corpus, damping_factor):
@@ -110,32 +112,30 @@ def iterate_pagerank(corpus, damping_factor):
     their estimated PageRank value (a value between 0 and 1). All
     PageRank values should sum to 1.
     """
-    ranks = {}
-    threshold = 0.0005
-    N = len(corpus)
-    
-    for key in corpus:
-        ranks[key] = 1 / N
 
+    num_pages = len(corpus)
+    initial_rank = 1 / num_pages
+    ranks = {page: initial_rank for page in corpus}
+    threshold = 0.0005
 
     while True:
-        count = 0
-        for key in corpus:
-            new = (1 - damping_factor) / N
-            sigma = 0
-            for page in corpus:
-                if key in corpus[page]:
-                    num_links = len(corpus[page])
-                    sigma = sigma + ranks[page] / num_links
-            sigma = damping_factor * sigma
-            new += sigma
-            if abs(ranks[key] - new) < threshold:
-                count += 1
-            ranks[key] = new 
-        if count == N:
-            break
-    return ranks
+        new_ranks = {}
+        total_diff = 0
 
+        for page in corpus:
+            new_rank = (1 - damping_factor) / num_pages
+            link_sum = sum((ranks[linked_page] / len(corpus[linked_page])) for linked_page in corpus if page in corpus[linked_page])
+            new_rank += damping_factor * link_sum
+            new_ranks[page] = new_rank
+
+            total_diff += abs(new_ranks[page] - ranks[page])
+
+        if total_diff < threshold:
+            break
+
+        ranks = new_ranks
+
+    return ranks
 
 if __name__ == "__main__":
     main()
