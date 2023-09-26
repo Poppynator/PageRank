@@ -8,9 +8,9 @@ SAMPLES = 10000
 
 
 def main():
-    #if len(sys.argv) != 2:
-        #sys.exit("Usage: python pagerank.py corpus")
-    corpus = crawl("c:\\Users\\d-pop\\Documents\\Visual Studio Code\\PageRank\\PageRank\\corpus2") #(sys.argv[1]) TODO
+    if len(sys.argv) != 2:
+        sys.exit("Usage: python pagerank.py corpus")
+    corpus = crawl(sys.argv[1]) 
     ranks = sample_pagerank(corpus, DAMPING, SAMPLES)
     print(f"PageRank Results from Sampling (n = {SAMPLES})")
     for page in sorted(ranks):
